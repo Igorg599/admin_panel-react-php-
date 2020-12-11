@@ -1,8 +1,12 @@
+import "../../helpers/iframeLoader.js";
 import axios from 'axios';
 import React, {Component} from 'react';
-import '../../helpers/iframeLoader.js';
 import DOMHelper from '../../helpers/dom-helper';
 import EditorText from '../editor-text';
+import UIkit from 'uikit';
+import Spinner from '../spinner';
+import ConfirmModal from '../confirm-modal';
+import ChooseModal from '../choose-modal';
 
 export default class Editor extends Component {
     constructor() {
@@ -10,27 +14,36 @@ export default class Editor extends Component {
         this.currentPage = "index.html";
         this.state = {
             pageList: [],
-            newPageName: ""
+            newPageName: "",
+            loading: true
         }
         this.createNewPage = this.createNewPage.bind(this);
+        this.isLoading = this.isLoading.bind(this);
+        this.isLoaded = this.isLoaded.bind(this);
+        this.save = this.save.bind(this);
+        this.init = this.init.bind(this);
     }
 
     componentDidMount() {
-        this.init(this.currentPage);
+        this.init(null, this.currentPage);
     }
 
-    init(page) {
+    init(e, page) {
+        if (e) {
+            e.preventDefault();
+        }
+        this.isLoading();
         this.iframe = document.querySelector('iframe');
-        this.open(page);
+        this.open(page, this.isLoaded);
         this.loadPageList();
     }
 
-    open(page) {
+    open(page, cb) {
         this.currentPage = page;
 
         axios
-            .get(`../${page}?rnd=${Math.random}`)
-            .then(res => DOMHelper.parseStrToDom(res.data))
+            .get(`../${page}?rnd=${Math.random()}`)
+            .then(res => DOMHelper.parseStrToDOM(res.data))
             .then(DOMHelper.wrapTextNodes)
             .then(dom => {
                 this.virtualDom = dom;
@@ -38,20 +51,23 @@ export default class Editor extends Component {
             })
             .then(DOMHelper.serializeDOMToString)
             .then(html => axios.post("./api/saveTempPage.php", {html}))
-            .then(() => this.iframe.load("../temp.html"))
+            .then(() => this.iframe.load("../yfuy1g221ub_hhg44.html"))
+            .then(() => axios.post("./api/deleteTempPage.php"))
             .then(() => this.enableEditing())
-            .then(() => this.injectStyles());
-        //     this.iframe.load(this.currentPage, () => {
-            
-        // })
+            .then(() => this.injectStyles())
+            .then(cb);
     }
 
-    save() {
+    save(onSuccess, onError) {
+        this.isLoading();
         const newDom = this.virtualDom.cloneNode(this.virtualDom);
-        DOMHelper.unrapTextNodes(newDom);
+        DOMHelper.unwrapTextNodes(newDom);
         const html = DOMHelper.serializeDOMToString(newDom);
         axios
-            .post('./api/savePage.php', {pageName: this.currentPage, html});
+            .post("./api/savePage.php", {pageName: this.currentPage, html})
+            .then(onSuccess)
+            .catch(onError)
+            .finally(this.isLoaded);
     }
 
     enableEditing() {
@@ -80,7 +96,7 @@ export default class Editor extends Component {
 
     loadPageList() {
         axios
-            .get("./api")
+            .get("./api/pageList.php")
             .then(res => this.setState({pageList: res.data}))
     }
 
@@ -95,32 +111,42 @@ export default class Editor extends Component {
         axios
             .post("./api/deletePage.php", {"name": page})
             .then(this.loadPageList())
-            .catch(() => alert("Страницы не существует"));
+            .catch(() => alert("Страницы не существует!"));
+    }
+
+    isLoading() {
+        this.setState({
+            loading: true
+        })
+    }
+
+    isLoaded() {
+        this.setState({
+            loading: false
+        })
     }
 
     render() {
-        // const {pageList} = this.state;
-        // const pages = pageList.map((page, i) => {
-        //     return (
-        //     <h1 key={i}>{page}
-        //         <a 
-        //         href="#"
-        //         onClick={() => this.deletePage(page)}>(x)</a>
-        //     </h1>
-        //     )
-        // });
+        const {loading, pageList} = this.state;
+        const modal = true;
+        let spinner;
+        
+        loading ? spinner = <Spinner active/> : spinner = <Spinner />
+
         return (
             <>
-                <button onClick={() => this.save()}>Click</button>
                 <iframe src={this.currentPage} frameBorder="0"></iframe>
+                
+                {spinner}
+
+                <div className="panel">
+                    <button className="uk-button uk-button-primary uk-margin-small-right" uk-toggle="target: #modal-open">Открыть</button>
+                    <button className="uk-button uk-button-primary" uk-toggle="target: #modal-save">Опубликовать</button>
+                </div>
+                
+                <ConfirmModal modal={modal}  target={'modal-save'} method={this.save}/>
+                <ChooseModal modal={modal}  target={'modal-open'} data={pageList} redirect={this.init}/>
             </>
-            // <iframe>
-            //     <input 
-            //     onChange={(e) => {this.setState({newPageName: e.target.value})}} 
-            //     type="text"/>
-            //     <button onClick={this.createNewPage}>Создать страницу</button>
-            //     {pages}
-            // </iframe>
-        );
+        )
     }
 }

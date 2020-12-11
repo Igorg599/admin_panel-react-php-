@@ -1,6 +1,6 @@
 export default class DOMHelper {
 
-    static parseStrToDom(str) {
+    static parseStrToDOM(str) {
         const parser = new DOMParser();
         return parser.parseFromString(str, "text/html");
     }
@@ -9,8 +9,7 @@ export default class DOMHelper {
         const body = dom.body;
         let textNodes = [];
 
-
-        function recursy (element) {
+        function recursy(element) {
             element.childNodes.forEach(node => {
                 
                 if(node.nodeName === "#text" && node.nodeValue.replace(/\s+/g, "").length > 0) {
@@ -19,7 +18,7 @@ export default class DOMHelper {
                     recursy(node);
                 }
             })
-        }
+        };
 
         recursy(body);
 
@@ -38,7 +37,7 @@ export default class DOMHelper {
         return serializer.serializeToString(dom);
     }
 
-    static unrapTextNodes(dom) {
+    static unwrapTextNodes(dom) {
         dom.body.querySelectorAll("text-editor").forEach(element => {
             element.parentNode.replaceChild(element.firstChild, element);
         });

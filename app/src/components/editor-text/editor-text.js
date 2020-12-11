@@ -8,12 +8,18 @@ export default class EditorText {
         this.element.addEventListener("input", () => this.onTextEdit());
         if (this.element.parentNode.nodeName === "A" || this.element.parentNode.nodeName === "BUTTON") {
             this.element.addEventListener("contextmenu", (e) => this.onCtxMenu(e));
-        }        
+        }
     }
 
     onCtxMenu(e) {
         e.preventDefault();
         this.onClick();
+    }
+
+    onKeypress(e) {
+        if(e.keyCode === 13) {
+            this.element.blur();
+        }
     }
 
     onClick() {
@@ -23,12 +29,6 @@ export default class EditorText {
 
     onBlur() {
         this.element.removeAttribute('contenteditable');
-    }
-
-    onKeypress(e) {
-        if(e.keyCode === 13) {
-            this.element.blur();
-        }
     }
 
     onTextEdit() {
